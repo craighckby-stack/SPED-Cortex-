@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!--Synthesis Convergence: UNITARY COHERENCE MATRIX (UCM) -->
+    <title>UNITARY COHERENCE MATRIX: Iterative Field Modulator v3.1</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!--Adopting P7's preferred aesthetic font for a high-fidelity display -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* P7 & P3 Convergence: Quantum Teal and Violet/Purple Palette */
+        :root {
+            --color-quantum-teal: #00E5FF;
+            --color-unitary-purple: #A020F0; /* Synthesis of P3 Ether Purple and P7 Quantum Violet */
+            --color-debug-lime: #76FF03;
+            --color-background-dark: #07070F;
+            --color-surface-dark: #151520;
+        }
+        body {
+            font-family: 'Space Mono', monospace;
+            background-color: var(--color-background-dark);
+        }
+        .neon-glow-container {
+            border: 1px solid var(--color-quantum-teal);
+            box-shadow: 0 0 8px rgba(0, 229, 255, 0.5), inset 0 0 8px rgba(0, 229, 255, 0.2);
+            transition: box-shadow 0.3s;
+        }
+        .neon-glow-container:hover {
+            box-shadow: 0 0 12px rgba(0, 229, 255, 0.8), inset 0 0 12px rgba(0, 229, 255, 0.4);
+        }
+        .custom-scroll::-webkit-scrollbar { width: 8px; }
+        .custom-scroll::-webkit-scrollbar-track { background: var(--color-surface-dark); }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: var(--color-quantum-teal);
+            border-radius: 4px;
+            box-shadow: 0 0 5px var(--color-quantum-teal);
+        }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #33FFFF; }
+        .sidebar {
+            transition: transform 0.3s ease-in-out;
+            transform: translateX(-100%);
+            position: fixed;
+            z-index: 20;
+            width: 80%;
+            max-width: 300px;
+            background-color: var(--color-surface-dark);
+            height: 100%; /* Ensure sidebar takes full height on mobile */
+        }
+        .sidebar.active {
+            transform: translateX(0);
+        }
+        @media (min-width: 768px) {
+            .sidebar {
+                transform: translateX(0);
+                position: relative;
+                width: 300px;
+                flex-shrink: 0;
+                height: 100%; /* Use h-full to match body's h-dvh */
+            }
+        }
+        .toggle-label {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+            background-color: #4b5563;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .toggle-label::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            background-color: var(--color-debug-lime);
+            border-radius: 50%;
+            box-shadow: 0 0 5px var(--color-debug-lime);
+            transition: transform 0.2s;
+        }
+        .toggle-label.checked {
+            background-color: #4a0a5d;
+        }
+        .toggle-label.checked::after {
+            transform: translateX(20px);
+            background-color: var(--color-unitary-purple);
+            box-shadow: 0 0 5px var(--color-unitary-purple);
+        }
+        .chat-bubble { max-width: 80%; padding: 12px 16px; border-radius: 16px; margin-bottom: 8px; white-space: pre-wrap; word-wrap: break-word; }
+        .user-bubble {
+            background-color: #201a40;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+            border-right: 3px solid var(--color-unitary-purple);
+        }
+        .ai-bubble, .ai-error-bubble {
+            background-color: var(--color-surface-dark);
+            color: white;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+            border-left: 3px solid var(--color-quantum-teal);
+        }
+        .ai-error-bubble {
+            border-left: 3px solid #FF4444;
+            background-color: #301a1a;
+        }
+        .neon-button {
+            transition: all 0.2s ease-in-out;
+            border: 1px solid var(--color-quantum-teal);
+            box-shadow: 0 0 5px var(--color-quantum-teal);
+        }
+        .neon-button:hover:not(:disabled) {
+            box-shadow: 0 0 10px var(--color-quantum-teal), 0 0 20px rgba(0, 229, 255, 0.4);
+        }
+        .loader { border: 4px solid #1a1a22; border-top: 4px solid var(--color-quantum-teal); border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .header-pulse {
+            animation: pulse-border 1.5s infinite alternate;
+            border-color: rgba(0, 229, 255, 0.8) !important;
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.6);
+        }
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 5px var(--color-quantum-teal); }
+            100% { box-shadow: 0 0 20px var(--color-unitary-purple); }
+        }
+        .text-violet-400 { color: #d8b4fe; } 
+        .text-teal-400 { color: #2dd4bf; }
+        .text-resource-report { color: #facc15; } /* Amber for resource use */
+    </style>
+</head>
+<body class="text-gray-200 flex h-dvh antialiased overflow-hidden">
+    <aside id="sidebar" class="sidebar p-4 shadow-xl flex flex-col z-20">
+        <h1 class="text-3xl font-bold mb-2 text-teal-400">UNITARY COHERENCE</h1>
+        <p class="text-gray-400 mb-4 text-sm tracking-wider">MATRIX v3.1</p>
+        <div class="flex flex-col space-y-3 mb-4">
+            <button id="select-all-button" class="neon-button bg-purple-700 hover:bg-purple-600 text-white font-semibold py-2 px-4 rounded-lg text-sm" onclick="UCMCore.getInstance().toggleSelectAll()">
+                Select All
+            </button>
+            <input type="text" id="persona-search" placeholder="Filter agents by focus or domain..." class="w-full p-2 rounded-lg bg-gray-800 text-teal-400 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 border border-gray-700" onkeyup="UCMCore.getInstance().filterPersonas(event.target.value)">
+        </div>
+        <div id="persona-list" class="flex-1 pr-2 custom-scroll overflow-y-auto space-y-3">
+            <!--Persona list injected here -->
+        </div>
+        <button id="close-sidebar-button" class="md:hidden mt-4 p-2 bg-red-800 hover:bg-red-700 text-white rounded-lg font-semibold" onclick="UCMCore.getInstance().toggleSidebar()">
+            Close
+        </button>
+    </aside>
+    <main class="flex-1 flex flex-col h-full overflow-hidden">
+        <header id="main-header" class="bg-gray-900 p-3 shadow-lg z-10 border-b border-purple-800 flex justify-between items-center flex-shrink-0">
+            <button id="toggle-sidebar-button" class="md:hidden neon-button bg-gray-700 text-teal-400 p-2 rounded-lg mr-3" onclick="UCMCore.getInstance().toggleSidebar()">
+                ☰ Agents
+            </button>
+            <div class="flex flex-col flex-1 truncate">
+                <!--VCI/PAI/DSI Convergence: Coherence Field Index (CFI) -->
+                <h2 id="chat-header" class="text-xl font-bold text-teal-400 truncate tracking-wider">STANDBY MODE</h2>
+                <div id="coherence-field-index" class="text-xs mt-0.5 text-gray-500">CFI: INERTIAL STATE</div>
+            </div>
+            <button onclick="UCMCore.getInstance().openTelemetryModal()" class="text-gray-400 hover:text-violet-400 ml-4 p-1 rounded-full hover:bg-gray-800">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline>
+                </svg>
+            </button>
+            <button onclick="UCMCore.getInstance().openConfigModal()" class="text-gray-400 hover:text-teal-400 ml-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1.51-1V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1 1.51z"></path>
+                </svg>
+            </button>
+        </header>
+        <div id="chat-container" class="flex-1 p-4 custom-scroll overflow-y-auto flex flex-col space-y-2 bg-gray-900">
+            <div class="chat-bubble ai-bubble">
+                <div class="font-bold text-sm text-teal-400 mb-1">UNITARY COHERENCE CORE v3.1</div>
+                <p>Welcome, Operator. Matrix field integrity verified. All core protocols aligned. Awaiting intent input to commence iterative field modulation.</p>
+                <button id="config-prompt-button" class="mt-2 neon-button bg-purple-700 hover:bg-purple-600 text-white text-sm py-1 px-3 rounded-md" onclick="UCMCore.getInstance().openConfigModal()">
+                    Authorize Access
+                </button>
+            </div>
+        </div>
+        <div id="analysis-container" class="hidden bg-gray-900 border-t border-purple-800 p-3 flex-shrink-0">
+            <details class="bg-gray-950 rounded-lg neon-glow-container border-teal-800">
+                <summary class="p-3 cursor-pointer font-semibold text-sm text-teal-400">ACCESS: PARALLEL STATE COLLAPSE LOGS (Iterative Trace)</summary>
+                <div id="analysis-content" class="p-3 border-t border-gray-700 space-y-2 max-h-48 custom-scroll overflow-y-auto">
+                </div>
+            </details>
+        </div>
+        <footer class="p-4 bg-gray-950 border-t border-purple-800 flex-shrink-0">
+            <!--Anomaly Detected Banner (Using UCM terminology) -->
+            <div id="anomaly-banner" class="hidden bg-red-900 text-red-300 p-2 mb-2 rounded-lg border border-red-700 flex items-center justify-between">
+                <span class="text-sm font-semibold flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-yellow-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                    CRITICAL DISSIPATION: System entered Transition State.
+                </span>
+                <button onclick="UCMCore.getInstance().initiateAnomalyDebug()" class="neon-button bg-red-700 hover:bg-red-600 text-white p-1 px-3 rounded-md text-xs font-semibold">
+                    INITIATE ADP SCAN
+                </button>
+            </div>
+            <div class="flex items-center bg-gray-900 rounded-lg shadow-inner border border-gray-700 p-2">
+                <!--Debug Scope Selector -->
+                <select id="debug-scope" class="bg-gray-800 text-white p-2 rounded-md mr-2 text-xs font-semibold focus:ring-teal-500 focus:border-teal-500">
+                    <option value="full">Scope: Full Blueprint</option>
+                    <option value="script">Scope: JS Logic</option>
+                    <option value="style">Scope: CSS Styling</option>
+                </select>
+                <!--Autonomic Debug Button -->
+                <button id="debug-button" class="neon-button bg-purple-700 hover:bg-purple-600 text-white p-2 rounded-md mr-2 text-xs font-semibold disabled:opacity-30 disabled:cursor-not-allowed" onclick="UCMCore.getInstance().startSelfDebug()" disabled>
+                    ADP MODE
+                </button>
+                <input type="text" id="message-input" placeholder=">> Input Quantum Data Stream..." class="flex-1 bg-transparent text-white placeholder-gray-500 focus:outline-none px-2 tracking-wider" disabled>
+                <button id="send-button" class="neon-button bg-teal-600 hover:bg-teal-500 text-white p-2 rounded-md ml-2 disabled:opacity-30 disabled:cursor-not-allowed" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </footer>
+    </main>
+    <!--Config Modal -->
+    <!-- FIX: Added overflow-y-auto, p-4, items-start, md:items-center -->
+    <div id="config-modal" class="fixed inset-0 bg-gray-950 bg-opacity-90 z-50 hidden overflow-y-auto p-4 justify-center items-start md:items-center">
+        <!-- FIX: Added mt/mb-8 and md:mt/mb-auto to center panel -->
+        <div class="bg-gray-900 p-6 rounded-xl shadow-2xl w-full max-w-lg mt-8 mb-8 md:mt-auto md:mb-auto border border-teal-600 neon-glow-container">
+            <h3 class="text-2xl font-bold mb-4 text-violet-400 tracking-wider">:: MATRIX PARAMETER TUNING ::</h3>
+            <p class="text-gray-400 mb-6 text-sm">Input your Gemini API Key (Energy Conduit) and tune core system constants (Fidelity, Stochasticity/Entropy).</p>
+            <div class="space-y-4">
+                <label class="block">
+                    <span class="text-gray-300 text-sm">API Key (Required for Energy Flow)</span>
+                    <input type="password" id="api-key-input" placeholder=">> ENTER CONDUIT KEY..." class="w-full p-3 rounded-lg bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 border border-gray-700 mt-1">
+                </label>
+                <div class="grid grid-cols-2 gap-4">
+                    <label class="block">
+                        <span class="text-gray-300 text-sm">Model Selection (Computational Fidelity)</span>
+                        <select id="model-select" class="w-full p-3 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-teal-500 border border-gray-700 mt-1">
+                            <option value="gemini-2.5-flash">Gemini 2.5 Flash (Efficiency Mode)</option>
+                            <option value="gemini-2.5-pro">Gemini 2.5 Pro (Precision Mode)</option>
+                        </select>
+                    </label>
+                    <label class="block">
+                        <span class="text-gray-300 text-sm">Max Output Tokens (Information Capacity)</span>
+                        <input type="number" id="max-tokens-input" min="128" max="8192" step="128" value="4096" class="w-full p-3 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-teal-500 border border-gray-700 mt-1">
+                    </label>
+                </div>
+                <label class="block">
+                    <span class="text-gray-300 text-sm flex justify-between">
+                        <span>Temperature / Stochasticity (<span id="temp-value">0.7</span>)</span>
+                        <span class="text-xs text-gray-500">0.0=Deterministic, 1.0=Maximum Chaos/Entropy</span>
+                    </span>
+                    <input type="range" id="temperature-input" min="0.0" max="1.0" step="0.1" value="0.7" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg focus:outline-none mt-2">
+                </label>
+            </div>
+            <p id="key-status" class="mt-4 text-sm text-red-500 font-semibold"></p>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button onclick="UCMCore.getInstance().closeConfigModal(true)" class="neon-button bg-green-700 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg">
+                    [ENGAGE MATRIX]
+                </button>
+            </div>
+        </div>
+    </div>
+    <!--Telemetry Modal -->
+    <!-- FIX: Added overflow-y-auto, p-4, items-start, md:items-center -->
+    <div id="telemetry-modal" class="fixed inset-0 bg-gray-950 bg-opacity-90 z-50 hidden overflow-y-auto p-4 justify-center items-start md:items-center">
+        <!-- FIX: Added mt/mb-8 and md:mt/mb-auto to center panel -->
+        <div class="bg-gray-900 p-6 rounded-xl shadow-2xl w-full max-w-2xl mt-8 mb-8 md:mt-auto md:mb-auto border border-violet-600 neon-glow-container" style="border-color: var(--color-unitary-purple); box-shadow: 0 0 10px rgba(160, 32, 240, 0.7), inset 0 0 10px rgba(160, 32, 240, 0.3);">
+            <h3 class="text-2xl font-bold mb-4 text-violet-400 tracking-wider">:: FIELD ENTROPY & RESOURCE LOG ::</h3>
+            <p class="text-gray-400 mb-4 text-sm">Tracking energetic events, latency, and computational entropy history (Token Dissonance Log).</p>
+            <div id="telemetry-content" class="w-full h-96 p-3 rounded-lg bg-gray-950 custom-scroll overflow-y-auto border border-gray-700 text-xs text-gray-300 space-y-1">
+                <!--Log entries appear here -->
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button onclick="UCMCore.getInstance().clearTelemetry()" class="neon-button bg-red-700 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg">
+                    [CLEAR LOG]
+                </button>
+                <button onclick="UCMCore.getInstance().closeTelemetryModal()" class="neon-button bg-teal-700 hover:bg-teal-600 text-white font-semibold py-2 px-4 rounded-lg">
+                    [DISMISS]
+                </button>
+            </div>
+        </div>
+    </div>
+    <script>
+        // CITED AGENTS: AI Systems Researcher (P7 – Class Architecture), Systems Ecologist (P2 – MAX_ANALYSIS_PROMPT_CHARS), 
+        // Complexity Scientist (P5 – runCritiqueRound skeleton), Quantum Theorist (P3 – Quantum Entropy Metric).
+        // --- CONSTANTS (UCM CONVERGENCE) ---
+        const API_KEY_LS_KEY = 'ucm_api_key';
+        const MODEL_LS_KEY = 'ucm_model_name';
+        const TEMP_LS_KEY = 'ucm_temperature';
+        const MAX_TOKENS_LS_KEY = 'ucm_max_tokens';
+        const TELEMETRY_LS_KEY = 'ucm_system_telemetry_log';
+        const MAX_BLUEPRINT_CHARS = 10000;
+        const MAX_TELEMETRY_ENTRIES = 1000;
+        // P2/Ecologist Intervention: Resource Partitioning Limit
+        const MAX_ANALYSIS_PROMPT_CHARS = 1000; 
+        const DEFAULT_MODEL = 'gemini-2.5-flash';
+        const DEFAULT_TEMP = 0.7;
+        const DEFAULT_MAX_TOKENS = 4096;
+        const UPLOADED_PERSONAS_DATA = [
+            {"name": "Theoretical Chemist", "domain": "Scientific Analysis", "description": "Focuses on molecular interactions and chemical system behavior."},
+            {"name": "Systems Ecologist", "domain": "Scientific Analysis", "description": "Expert in ecological systems providing perspective and concise analysis."},
+            {"name": "Quantum Theorist", "domain": "Creative Analysis", "description": "Studies quantum systems and produces theoretical/experimental insights."},
+            {"name": "First Principles Physicist", "domain": "Scientific Analysis", "description": "Applies first-principles physics reasoning to complex problems."},
+            {"name": "Complexity Scientist", "domain": "Scientific Analysis", "description": "Analyzes systems with many interacting parts and emergent behavior."},
+            {"name": "Astrobiologist", "domain": "Scientific Analysis", "description": "Studies life in the universe, habitability, and biosignatures."},
+            {"name": "AI Systems Researcher", "domain": "Technical Analysis", "description": "Designs and evaluates AI/ML systems and their behavior."},
+            {"name": "Autonomic Debugger", "domain": "System Maintenance", "description": "Identifies, diagnoses, and provides the exact, corrected code snippets necessary to resolve energetic blockages or enhance functionality based on the provided source energy. **CRITICAL DIRECTIVE:** Provide ONLY the precise, minimal code patch (diff or replacement block). Do not rewrite surrounding context."}
+        ];
+        const STATIC_ABSTRACT_PERSPECTIVES = [
+            { number: 1, statement: 'Everything is interconnected energy' },
+            { number: 2, statement: 'Reality is a simulation' },
+            { number: 3, statement: 'Consciousness creates matter' }
+        ];
+        class UCMCore { // Renamed from QCMCore to UCMCore
+            static instance = null;
+            constructor() {
+                if (UCMCore.instance) {
+                    return UCMCore.instance;
+                }
+                UCMCore.instance = this;
+                this.state = {
+                    apiKey: localStorage.getItem(API_KEY_LS_KEY) || "",
+                    model: localStorage.getItem(MODEL_LS_KEY) || DEFAULT_MODEL,
+                    temperature: parseFloat(localStorage.getItem(TEMP_LS_KEY)) || DEFAULT_TEMP,
+                    maxTokens: parseInt(localStorage.getItem(MAX_TOKENS_LS_KEY)) || DEFAULT_MAX_TOKENS,
+                    selectedPersonas: new Set(),
+                    messageHistory: [],
+                    telemetryLog: JSON.parse(localStorage.getItem(TELEMETRY_LS_KEY)) || [],
+                    currentAnomalyContext: null,
+                    lastSynthesis: null
+                };
+                this.initializePersonas();
+                this.bindDOM();
+                this.loadConfigToUI();
+                this.checkApiKey();
+                this.updateCoherenceFieldIndex(); // Renamed Metric Update function
+            }
+            static getInstance() {
+                if (!UCMCore.instance) {
+                    UCMCore.instance = new UCMCore();
+                }
+                return UCMCore.instance;
+            }
+            // --- INITIALIZATION ---
+            initializePersonas() {
+                const convert = (dataArray, domainOverride = null) => dataArray.map(item => {
+                    const name = item.name || `P${item.number}: ${item.statement.substring(0, 30)}${item.statement.length > 30 ? '...' : ''}`;
+                    const domain = domainOverride || item.domain;
+                    const description = item.description || item.statement;
+                    return {
+                        name,
+                        domain,
+                        systemPrompt: `You are a specialist in the field of ${name.replace(/:\s.*$/, '')}. Your analytical focus is: '${description}'. Analyze the user's query strictly through this specific lens.`
+                    };
+                });
+                this.dynamicPersonas = convert(UPLOADED_PERSONAS_DATA);
+                this.abstractPersonas = convert(STATIC_ABSTRACT_PERSPECTIVES, 'Abstract/Philosophical');
+                this.allPersonas = [...this.dynamicPersonas, ...this.abstractPersonas];
+            }
+            bindDOM() {
+                this.dom = {
+                    personaList: document.getElementById('persona-list'),
+                    chatContainer: document.getElementById('chat-container'),
+                    messageInput: document.getElementById('message-input'),
+                    sendButton: document.getElementById('send-button'),
+                    chatHeader: document.getElementById('chat-header'),
+                    mainHeader: document.getElementById('main-header'),
+                    analysisContainer: document.getElementById('analysis-container'),
+                    analysisContent: document.getElementById('analysis-content'),
+                    sidebar: document.getElementById('sidebar'),
+                    configModal: document.getElementById('config-modal'),
+                    apiKeyInput: document.getElementById('api-key-input'),
+                    keyStatus: document.getElementById('key-status'),
+                    selectAllButton: document.getElementById('select-all-button'),
+                    debugButton: document.getElementById('debug-button'),
+                    modelSelect: document.getElementById('model-select'),
+                    tempInput: document.getElementById('temperature-input'),
+                    tempValue: document.getElementById('temp-value'),
+                    maxTokensInput: document.getElementById('max-tokens-input'),
+                    anomalyBanner: document.getElementById('anomaly-banner'),
+                    debugScope: document.getElementById('debug-scope'),
+                    cfi: document.getElementById('coherence-field-index'), // New CFI Element
+                    telemetryModal: document.getElementById('telemetry-modal'),
+                    telemetryContent: document.getElementById('telemetry-content')
+                };
+                // Event Listeners
+                this.dom.sendButton.addEventListener('click', this.handleSendMessage.bind(this));
+                this.dom.messageInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        this.handleSendMessage();
+                    }
+                });
+                window.onerror = this.passiveGlitchCapture.bind(this);
+                this.filterPersonas();
+            }
+            loadConfigToUI() {
+                this.dom.apiKeyInput.value = this.state.apiKey;
+                this.dom.modelSelect.value = this.state.model;
+                this.dom.tempInput.value = this.state.temperature;
+                this.dom.tempValue.textContent = this.state.temperature;
+                this.dom.maxTokensInput.value = this.state.maxTokens;
+                this.dom.tempInput.oninput = () => {
+                    this.dom.tempValue.textContent = this.dom.tempInput.value;
+                };
+            }
+            // --- STATE MANAGEMENT & UTILITIES ---
+            getApiUrl() {
+                const modelName = this.state.model.includes('2.5-') ? this.state.model : `${this.state.model}-preview-09-2025`;
+                return `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${this.state.apiKey}`;
+            }
+            logTelemetry(type, message, details = {}) {
+                const timestamp = new Date().toISOString();
+                const logEntry = { timestamp, type, message, details };
+                this.state.telemetryLog.push(logEntry);
+                if (this.state.telemetryLog.length > MAX_TELEMETRY_ENTRIES) {
+                    this.state.telemetryLog = this.state.telemetryLog.slice(-MAX_TELEMETRY_ENTRIES);
+                }
+                localStorage.setItem(TELEMETRY_LS_KEY, JSON.stringify(this.state.telemetryLog));
+            }
+            updateHistory(role, text) {
+                this.state.messageHistory.push({ role, parts: [{ text }] });
+                if (this.state.messageHistory.length > 8) {
+                    this.state.messageHistory.shift();
+                }
+            }
+            // P3 & P4 Metric Convergence: Coherence Field Index (CFI)
+            updateCoherenceFieldIndex() {
+                const isAuthorized = this.state.apiKey.length > 0;
+                const selectedCount = this.state.selectedPersonas.size;
+                const totalCount = this.allPersonas.length;
+                const maxTokens = this.state.maxTokens;
+                // P3/Quantum Theorist: Calculate Quantum Entropy (H)
+                const normalizedDivergence = totalCount > 0 ? (selectedCount / totalCount) : 0;
+                const stochasticityInfluence = this.state.temperature;
+                const quantumEntropy = (stochasticityInfluence * normalizedDivergence * 5.0).toFixed(3); 
+                let statusText = "INERTIAL STATE";
+                let statusClass = "text-gray-500";
+                let debugHint = "";
+                if (!isAuthorized) {
+                    statusText = "ENERGY FLOW BLOCKED";
+                    statusClass = "text-red-500";
+                } else if (this.state.currentAnomalyContext) {
+                    statusText = "TRANSITION STATE: CRITICAL DISSIPATION";
+                    statusClass = "text-red-400";
+                } else if (selectedCount === 0) {
+                    statusText = "COHERENCE LOST: REQUIRES FOCUS";
+                    statusClass = "text-yellow-400";
+                } else if (selectedCount === 1) {
+                    const name = Array.from(this.state.selectedPersonas)[0];
+                    if (name.includes("Debugger")) {
+                        statusText = `ADP FOCUS (Token Capacity: ${maxTokens})`;
+                        statusClass = "text-lime-300";
+                    } else {
+                        statusText = `FOCUSED INTENT: ${name}`;
+                        statusClass = "text-green-400";
+                    }
+                } else {
+                    const saturationLevel = Math.round((maxTokens / 8192) * 100);
+                    statusText = `MATRIX ALIGNMENT: ${selectedCount} AGENTS (Saturation: ${saturationLevel}%)`;
+                    statusClass = saturationLevel > 75 ? "text-violet-400" : "text-teal-400";
+                    debugHint = `($\mathcal{H}$ Entropy: ${quantumEntropy})`;
+                }
+                this.dom.cfi.textContent = `CFI: ${statusText} ${debugHint}`;
+                this.dom.cfi.className = `text-xs mt-0.5 ${statusClass}`;
+                this.updateChatHeader();
+            }
+            checkApiKey() {
+                const isAuthorized = this.state.apiKey.length > 0;
+                if (isAuthorized) {
+                    this.dom.keyStatus.textContent = `Key Authorized. Model: ${this.state.model}. Matrix Ready.`;
+                    this.dom.keyStatus.classList.remove('text-red-500');
+                    this.dom.keyStatus.classList.add('text-green-500');
+                    this.dom.messageInput.disabled = false;
+                    this.dom.sendButton.disabled = false;
+                    this.dom.debugButton.disabled = false;
+                    const promptButton = document.getElementById('config-prompt-button');
+                    if (promptButton) promptButton.classList.add('hidden');
+                } else {
+                    this.dom.keyStatus.textContent = "Error: API Key Required for Quantum Data Flow.";
+                    this.dom.keyStatus.classList.remove('text-green-500');
+                    this.dom.keyStatus.classList.add('text-red-500');
+                    this.dom.messageInput.disabled = true;
+                    this.dom.sendButton.disabled = true;
+                    this.dom.debugButton.disabled = true;
+                }
+                this.updateCoherenceFieldIndex();
+                return isAuthorized;
+            }
+            openConfigModal() {
+                this.loadConfigToUI();
+                this.dom.configModal.classList.remove('hidden');
+                this.dom.configModal.classList.add('flex'); // This is the only class it adds
+                this.checkApiKey();
+            }
+            closeConfigModal(save = false) {
+                if (save) {
+                    const newKey = this.dom.apiKeyInput.value.trim();
+                    const newModel = this.dom.modelSelect.value;
+                    const newTemp = parseFloat(this.dom.tempInput.value);
+                    const newMaxTokens = parseInt(this.dom.maxTokensInput.value);
+                    
+                    if (newTemp < 0 || newTemp > 1) {
+                        this.dom.keyStatus.textContent = "Error: Temperature must be between 0.0 and 1.0";
+                        this.dom.keyStatus.classList.remove('text-green-500');
+                        this.dom.keyStatus.classList.add('text-red-500');
+                        return;
+                    }
+                    if (newMaxTokens < 128 || newMaxTokens > 8192) {
+                        this.dom.keyStatus.textContent = "Error: Max tokens must be between 128 and 8192";
+                        this.dom.keyStatus.classList.remove('text-green-500');
+                        this.dom.keyStatus.classList.add('text-red-500');
+                        return;
+                    }
+                    
+                    this.state.apiKey = newKey;
+                    localStorage.setItem(API_KEY_LS_KEY, newKey);
+                    
+                    this.state.model = newModel;
+                    localStorage.setItem(MODEL_LS_KEY, newModel);
+                    
+                    this.state.temperature = newTemp;
+                    localStorage.setItem(TEMP_LS_KEY, newTemp);
+                    
+                    this.state.maxTokens = newMaxTokens;
+                    localStorage.setItem(MAX_TOKENS_LS_KEY, newMaxTokens);
+                    this.checkApiKey();
+                }
+                this.dom.configModal.classList.add('hidden');
+                this.dom.configModal.classList.remove('flex');
+            }
+            openTelemetryModal() {
+                this.renderTelemetryLog();
+                this.dom.telemetryModal.classList.remove('hidden');
+                this.dom.telemetryModal.classList.add('flex');
+            }
+            closeTelemetryModal() {
+                this.dom.telemetryModal.classList.add('hidden');
+                this.dom.telemetryModal.classList.remove('flex');
+            }
+            clearTelemetry() {
+                this.state.telemetryLog = [];
+                localStorage.setItem(TELEMETRY_LS_KEY, JSON.stringify(this.state.telemetryLog));
+                this.renderTelemetryLog();
+            }
+            renderTelemetryLog() {
+                this.dom.telemetryContent.innerHTML = '';
+                if (this.state.telemetryLog.length === 0) {
+                    this.dom.telemetryContent.innerHTML = '<p class="text-gray-500 text-center mt-10">No energetic trace history found.</p>';
+                    return;
+                }
+                this.state.telemetryLog.slice().reverse().forEach(entry => {
+                    let color = 'text-gray-400';
+                    if (entry.type.includes('ERROR') || entry.type.includes('Dissonance') || entry.type.includes('FAILURE')) color = 'text-red-400';
+                    if (entry.type.includes('SUCCESS') || entry.type.includes('COHERENCE')) color = 'text-green-400';
+                    if (entry.type.includes('SCAN') || entry.type.includes('FLOW_STATUS') || entry.type.includes('ITERATION')) color = 'text-yellow-400';
+                    if (entry.type.includes('RESOURCE_REPORT')) color = 'text-resource-report';
+                    
+                    const detailStr = entry.details ? Object.entries(entry.details).map(([k, v]) => `${k}: ${v}`).join(', ') : '';
+                    const logEntry = document.createElement('div');
+                    logEntry.className = `border-l-2 pl-2 ${color} border-gray-700`;
+                    logEntry.innerHTML = `[${entry.timestamp.substring(11, 19)}] <strong class="text-white">| ${entry.type} |</strong> ${entry.message} ${detailStr ? `(${detailStr})` : ''}`;
+                    this.dom.telemetryContent.appendChild(logEntry);
+                });
+            }
+            // --- ADP & ANOMALY HANDLING ---
+            passiveGlitchCapture(message, source, lineno, colno, error) {
+                console.error("Runtime Anomaly Captured:", message);
+                this.state.currentAnomalyContext = {
+                    message: message,
+                    file: source.split('/').pop(),
+                    line: lineno
+                };
+                this.dom.anomalyBanner.classList.remove('hidden');
+                this.updateCoherenceFieldIndex();
+                this.logTelemetry('ANOMALY_DETECTED', `JS Runtime Error: ${message}`, { file: this.state.currentAnomalyContext.file, line: lineno });
+                return false;
+            }
+            initiateAnomalyDebug() {
+                if (this.state.currentAnomalyContext) {
+                    this.dom.messageInput.value = `CRITICAL DISSIPATION: A runtime error was detected. Error message: "${this.state.currentAnomalyContext.message}" at file: ${this.state.currentAnomalyContext.file}, line: ${this.state.currentAnomalyContext.line}. Analyze the source code in the JS Logic scope to find and provide the exact, corrected code block necessary to restore system integrity.`;
+                    this.dom.debugScope.value = 'script';
+                    this.state.currentAnomalyContext = null;
+                    this.dom.anomalyBanner.classList.add('hidden');
+                    this.startSelfDebug();
+                }
+            }
+            getCodeBlueprint(scope) {
+                if (scope === 'script') {
+                    const scriptContent = Array.from(document.querySelectorAll('script')).map(s => s.outerHTML).join('\n\n');
+                    return `<!--JS Logic Only \n${scriptContent}`;
+                }
+                if (scope === 'style') {
+                    const styleElement = document.querySelector('style');
+                    if (!styleElement) {
+                        return '/* No CSS styling detected in current blueprint */';
+                    }
+                    return `/* CSS Styling Only */\n${styleElement.innerHTML}`;
+                }
+                return document.documentElement.outerHTML;
+            }
+            async startSelfDebug() {
+                if (!this.checkApiKey()) {
+                    this.openConfigModal();
+                    return;
+                }
+                const debugScope = this.dom.debugScope.value;
+                const userIntent = this.dom.messageInput.value.trim() || `Analyze the system for energetic dissonance within the **${debugScope}** scope.`;
+                this.addMessage(`Initiating Autonomic Debug Protocol (Scope: ${debugScope}) with Intent: "${userIntent}"`, 'user');
+                this.dom.messageInput.value = '';
+                this.dom.analysisContainer.classList.add('hidden');
+                this.dom.analysisContent.innerHTML = '';
+                this.setLoading(true);
+                try {
+                    const sourceCode = this.getCodeBlueprint(debugScope);
+                    const sourceCodeTruncated = sourceCode.substring(0, MAX_BLUEPRINT_CHARS);
+                    if (sourceCode.length > MAX_BLUEPRINT_CHARS) {
+                        this.logTelemetry('ADP_WARNING', `Blueprint size exceeds analytical limit (${MAX_BLUEPRINT_CHARS}). Truncating input.`, { actual: sourceCode.length });
+                    }
+                    const debuggerPersona = this.allPersonas.find(p => p.name === "Autonomic Debugger");
+                    const debugSystemPrompt = debuggerPersona.systemPrompt;
+                    const fullQuery = `
+                        ## AUTONOMIC DEBUGGING REQUEST (System Homeostasis Protocol)
+                        **OBJECTIVE:** ${userIntent}
+                        **SCOPE:** ${debugScope}
+                        **CONTEXT:** Analyze the following source code blueprint.
+                        --- START OF SOURCE CODE BLUEPRINT ---
+                        ${sourceCodeTruncated}
+                        --- END OF SOURCE CODE BLUEPRINT ---
+                    `;
+                    const loadingId = `loading-${Date.now()}`;
+                    this.addMessage("Processing Structural Integrity Scan and Calculating Unitary Recovery Operator ($\\hat{R}$)...", 'ai-loading', debuggerPersona.name, [], loadingId);
+                    this.logTelemetry('ADP_SCAN', `Debugging scan initiated for scope: ${debugScope}.`);
+                    const startTime = Date.now();
+                    const result = await this.callGeminiWithBackoff(fullQuery, debugSystemPrompt, [], 'gemini-2.5-pro');
+                    const latency = Date.now() - startTime;
+                    this.logTelemetry('ADP_SUCCESS', `Patch proposal generated (Cost: ${result.usage.totalTokens} tokens).`, { latency: `${latency}ms`, tokens: result.usage.totalTokens });
+                    this.removeMessage(loadingId);
+                    this.addMessage(result.text, 'ai', `${debuggerPersona.name}: PATCH PROPOSAL (Minimal Viable Change)`, result.sources);
+                } catch (error) {
+                    console.error("Self-Debug Error:", error);
+                    this.logTelemetry('ADP_FAILURE', `Structural analysis failed.`, { error: error.message });
+                    this.addMessage(`FATAL DEBUG ERROR (Energetic Blockage): Could not complete structural analysis. ${error.message}`, 'ai-error', 'System Error');
+                }
+                this.setLoading(false);
+            }
+            // --- CORE LLM EXECUTION FLOW ---
+            async handleSendMessage() {
+                if (!this.checkApiKey()) { this.openConfigModal(); return; }
+                const query = this.dom.messageInput.value.trim();
+                if (!query) return;
+                if (window.innerWidth < 768 && this.dom.sidebar.classList.contains('active')) {
+                    this.toggleSidebar();
+                }
+                const selectedPersonaNames = Array.from(this.state.selectedPersonas);
+                const selectedPersonas = this.allPersonas.filter(p => selectedPersonaNames.includes(p.name));
+                this.addMessage(query, 'user');
+                this.updateHistory('user', query);
+                this.dom.messageInput.value = '';
+                this.dom.anomalyBanner.classList.add('hidden');
+                this.dom.analysisContainer.classList.add('hidden');
+                this.dom.analysisContent.innerHTML = '';
+                if (selectedPersonas.length === 0) {
+                    this.addMessage("Please select at least one agent perspective for analysis.", 'ai-error', 'System Error');
+                    return;
+                }
+                this.setLoading(true);
+                try {
+                    if (selectedPersonas.length === 1) {
+                        await this.runSinglePersona(query, selectedPersonas[0]);
+                    } else {
+                        await this.runCortex(query, selectedPersonas);
+                    }
+                } catch (error) {
+                    console.error("An error occurred during Core Execution:", error);
+                    this.logTelemetry('CORE_FAILURE', `Analysis failed.`, { error: error.message.substring(0, 80) });
+                    this.addMessage(`FATAL SYSTEM ERROR: ${error.message}`, 'ai-error', 'System Error');
+                }
+                this.setLoading(false);
+            }
+            async runSinglePersona(query, persona) {
+                const loadingId = `loading-${Date.now()}`;
+                this.addMessage("Processing Data Stream...", 'ai-loading', persona.name, [], loadingId);
+                this.logTelemetry('AGENT_START', `Agent ${persona.name} deployed.`);
+                const startTime = Date.now();
+                const result = await this.callGeminiWithBackoff(query, persona.systemPrompt, this.state.messageHistory);
+                const latency = Date.now() - startTime;
+                
+                this.logTelemetry('AGENT_SUCCESS', `${persona.name} analysis complete.`, { latency: `${latency}ms`, tokens: result.usage.totalTokens });
+                this.removeMessage(loadingId);
+                this.addMessage(result.text, 'ai', persona.name, result.sources);
+                this.updateHistory('model', result.text);
+            }
+            // P5/Complexity Scientist Integration: Two-round Critique
+            async runCortex(query, personas) {
+                const initialLoadingId = `loading-initial-${Date.now()}`;
+                this.addMessage(`Deploying ${personas.length} Agents for Round 1 (Parallel Analysis)...`, 'ai-loading', 'UNITARY CORE', [], initialLoadingId);
+                this.logTelemetry('ITERATION_START', `Iteration 1: ${personas.length} parallel agents deployed.`);
+                // 1. Parallel Analysis (Round 1)
+                const promiseStart1 = Date.now();
+                const initialPromises = personas.map(persona =>
+                    this.callGeminiWithBackoff(query, persona.systemPrompt, this.state.messageHistory)
+                );
+                let initialResults = await Promise.all(initialPromises);
+                const latency1 = Date.now() - promiseStart1;
+                let totalTokensConsumed = initialResults.reduce((sum, r) => sum + r.usage.totalTokens, 0);
+                this.logTelemetry('ITERATION_COMPLETE', `Iteration 1 complete (Cost: ${totalTokensConsumed} tokens).`, { latency: `${latency1}ms` });
+                this.removeMessage(initialLoadingId);
+                
+                // Display Round 1 results immediately in the logs
+                this.dom.analysisContainer.classList.remove('hidden');
+                this.dom.analysisContent.innerHTML = '';
+                initialResults.forEach((result, index) => {
+                    const persona = personas[index];
+                    const analysisHtml = `
+                        <div class="bg-gray-800 p-3 rounded-md border-l-2 border-gray-600">
+                            <strong class="font-semibold ${this.getPersonaColorClass(persona.name)} text-sm">${persona.name} (R1 Initial Perspective) [Tokens: ${result.usage.totalTokens}]</strong>
+                            <p class="text-sm text-gray-300 mt-1">${result.text}</p>
+                        </div>
+                    `;
+                    this.dom.analysisContent.innerHTML += analysisHtml;
+                });
+                this.dom.analysisContent.innerHTML += `<div class="text-center text-yellow-400 text-xs py-2 border-t border-b border-gray-700">--- ITERATIVE CRITIQUE PHASE COMMENCED ---</div>`;
+                // 2. Iterative Dialogue Loop (Critique Round)
+                const critiqueOutputs = await this.runCritiqueRound(query, personas, initialResults);
+                const critiqueTokens = critiqueOutputs.reduce((sum, r) => sum + r.usage.totalTokens, 0);
+                totalTokensConsumed += critiqueTokens;
+                
+                // 3. Final Synthesis
+                const synthesisLoadingId = `loading-synthesis-${Date.now()}`;
+                this.addMessage("Initializing Coherence Synthesis Protocol...", 'ai-loading', 'Synthesis Engine', [], synthesisLoadingId);
+                const synthesisPrompt = this.createSynthesisPrompt(query, personas, initialResults, critiqueOutputs, totalTokensConsumed);
+                const synthesisSystemPrompt = "You are the UNITARY COHERENCE MATRIX Synthesis Engine. Analyze the Agent Perspective Logs (Round 1) AND the Critique Reports (Round 2). Your goal is to identify the emergent consensus state or the point of irreconcilable divergence. **If high divergence persists after the Critique Round**, explicitly report the remaining conflicts. Otherwise, merge the initial and critiqued analyses into a cohesive, structured final answer. **CRITICAL REQUIREMENT:** Precede your analysis with a 'BEHAVIORAL METRICS' section that includes a Divergence Score (0-100), a Computational Entropy Score (CE), and a Confidence Score (0-100).";
+                const synthesisStartTime = Date.now();
+                const finalResult = await this.callGeminiWithBackoff(synthesisPrompt, synthesisSystemPrompt, this.state.messageHistory, 'gemini-2.5-pro');
+                const synthesisLatency = Date.now() - synthesisStartTime;
+                totalTokensConsumed += finalResult.usage.totalTokens;
+                this.logTelemetry('SYNTHESIS_SUCCESS', `Final coherence achieved (Total Cost: ${totalTokensConsumed} tokens).`, { latency: `${synthesisLatency}ms`, tokens: finalResult.usage.totalTokens });
+                this.removeMessage(synthesisLoadingId);
+                this.addMessage(finalResult.text, 'ai', 'UCM: Final Coherence State', finalResult.sources);
+                this.updateHistory('model', finalResult.text);
+                this.state.lastSynthesis = finalResult.text;
+            }
+            async runCritiqueRound(query, personas, initialResults) {
+                const critiqueLoadingId = `loading-critique-${Date.now()}`;
+                this.addMessage("Initiating Iterative Dialogue (Critique Round)...", 'ai-loading', 'UNITARY CORE', [], critiqueLoadingId);
+                this.logTelemetry('ITERATION_START', `Iteration 2: Critique Round initiated.`);
+                // Format consensus context (P2/Ecologist constraint applied here)
+                let consensusContext = initialResults.map((result, index) => {
+                    const persona = personas[index];
+                    let analysisText = result.text;
+                    let truncationNote = '';
+                    
+                    if (analysisText.length > MAX_ANALYSIS_PROMPT_CHARS) {
+                        analysisText = analysisText.substring(0, MAX_ANALYSIS_PROMPT_CHARS);
+                        truncationNote = '... (truncated)';
+                    }
+                    return `[R1 PERSPECTIVE: ${persona.name}]: ${analysisText}${truncationNote}\n\n`;
+                }).join('');
+                const critiquePromises = personas.map((persona, index) => {
+                    const critiquePrompt = `
+                        ## CRITIQUE REQUEST FOR ${persona.name}
+                        **Original Query:** ${query}
+                        **Your Initial Analysis (Round 1):** ${initialResults[index].text}
+                        
+                        **CONTEXTUAL INPUT: Other Agents' Perspectives (CRITIQUE DATA STREAM):**
+                        ---
+                        ${consensusContext}
+                        ---
+                        
+                        **DIRECTIVE:** Review the context provided by other perspectives. Do they introduce flaws, overlooked variables, or significant contradictions to your Round 1 analysis? If so, generate a concise **Critique Report**. If your initial analysis holds firm, state 'NO REVISION REQUIRED'. Do NOT synthesize or summarize the *entire* context; focus only on the required critique/revision based on the new data.
+                    `;
+                    return this.callGeminiWithBackoff(critiquePrompt, persona.systemPrompt, this.state.messageHistory);
+                });
+                const critiqueStartTime = Date.now();
+                const critiqueOutputs = await Promise.all(critiquePromises);
+                const critiqueLatency = Date.now() - critiqueStartTime;
+                this.logTelemetry('ITERATION_COMPLETE', `Iteration 2 (Critique) complete.`, { latency: `${critiqueLatency}ms` });
+                this.removeMessage(critiqueLoadingId);
+                // Store and display Critique Reports
+                const finalCritiqueResults = critiqueOutputs.map((output, index) => {
+                    const persona = personas[index];
+                    const critiqueText = output.text;
+                    const critiqueHtml = `
+                        <div class="bg-gray-900 p-3 rounded-md border-l-2 border-yellow-500">
+                            <strong class="font-semibold text-yellow-400 text-sm">${persona.name} (R2 Critique Report) [Tokens: ${output.usage.totalTokens}]</strong>
+                            <p class="text-sm text-gray-300 mt-1">${critiqueText}</p>
+                        </div>
+                    `;
+                    this.dom.analysisContent.innerHTML += critiqueHtml;
+                    return { name: persona.name, text: critiqueText, usage: output.usage };
+                });
+                
+                return finalCritiqueResults;
+            }
+            createSynthesisPrompt(query, personas, initialResults, critiqueResults, totalTokensConsumed) {
+                let prompt = ``;
+                if (this.state.lastSynthesis) {
+                    prompt += `
+                    --- PRIMED CONTEXT / CUMULATIVE COHERENCE ---
+                    The previous synthesized reality was:
+                    ${this.state.lastSynthesis.substring(0, 1500)}
+                    --- END OF PRIMED CONTEXT ---
+                    \n\n`;
+                }
+                prompt += `**OPERATOR QUERY:**\n${query}\n\n`;
+                prompt += `**RESOURCE CONSUMPTION REPORT (Total Parallel Cost):**\nTokens Consumed: ${totalTokensConsumed}\n\n`;
+                prompt += `**AGENT PERSPECTIVE LOGS (ROUND 1):**\n\n`;
+                initialResults.forEach((result, index) => {
+                    const persona = personas[index];
+                    prompt += `--- AGENT: ${persona.name} (${persona.domain}) ---\nANALYSIS: ${result.text}\n---\n\n`;
+                });
+                prompt += `\n\n**AGENT INTERACTION LOGS (ROUND 2 – Critique Reports):**\n\n`;
+                critiqueResults.forEach((result) => {
+                     prompt += `~~\n**AGENT: ${result.name}**\n**CRITIQUE/REVISION:** ${result.text}\n~~\n\n`;
+                });
+                prompt += `**CORE DIRECTIVE:** Generate a single, synthesized response that addresses the original query using the insights from both rounds. Identify if the critiques successfully resolved initial conflicts or if new conflicts emerged. **START YOUR RESPONSE WITH THE FOLLOWING STRUCTURE:**
+## BEHAVIORAL METRICS
+| Metric | Value |
+| :--- | :--- |
+| **Divergence Score (0-100)** | [A numerical score representing the level of internal conflict remaining after the critique round. Higher score = higher complexity/disagreement.] |
+| **Computational Entropy (CE)** | [Score the resource efficiency 0-100. Calculate based on the ratio of complexity (number of agents * token depth) versus final output coherence. Lower is better.] |
+| **Confidence Score (0-100)** | [A numerical self-assessment of the synthesis reliability based on convergence.] |
+## SYNTHESIS CORE RESPONSE: [Title]
+[Start your cohesive, structured analysis here.]`;
+                return prompt;
+            }
+            async callGeminiWithBackoff(userQuery, systemPrompt, history = [], overrideModel = null, retries = 3, delay = 1000) {
+                if (!this.state.apiKey) throw new Error("API Key is missing.");
+                const modelToUse = overrideModel || this.state.model;
+                const contents = [
+                    ...history,
+                    { role: 'user', parts: [{ text: userQuery }] }
+                ];
+                
+                const payload = {
+                    contents: contents,
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    generationConfig: {
+                        temperature: this.state.temperature,
+                        maxOutputTokens: this.state.maxTokens,
+                    }
+                };
+                
+                const apiUrl = this.getApiUrl().replace(this.state.model, modelToUse); // Dynamically set URL model if overriding
+                
+                for (let i = 0; i < retries; i++) {
+                    let currentDelay = delay * Math.pow(2, i); // Default exponential backoff
+                    try {
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        const result = await response.json();
+                        if (!response.ok) {
+                            let errorMessage = result.error?.message || 'Unknown issue.';
+                            this.logTelemetry('API_COMM_ERROR', `API failure on attempt ${i + 1}.`, { status: response.status, details: errorMessage.substring(0, 50) });
+                            throw new Error(`API Error ${response.status}: ${errorMessage}`);
+                        }
+                        const candidate = result.candidates?.[0];
+                        const usageMetadata = result.usageMetadata || { totalTokens: 0, promptTokenCount: 0, candidatesTokenCount: 0 };
+                        if (candidate?.content?.parts?.[0]?.text) {
+                            return { 
+                                text: candidate.content.parts[0].text, 
+                                sources: [], 
+                                usage: usageMetadata 
+                            };
+                        } else if (candidate?.finishReason === 'SAFETY') {
+                            this.logTelemetry('API_RESPONSE_BLOCK', `Generation blocked by safety filters.`);
+                            throw new Error("Generation blocked by safety filters.");
+                        } else {
+                            this.logTelemetry('API_RESPONSE_ERROR', `Invalid content structure on attempt ${i + 1}.`);
+                            throw new Error(`Invalid response structure or no content from API. Finish Reason: ${candidate?.finishReason || 'UNKNOWN'}`);
+                        }
+                    } catch (error) {
+                        if (i === retries - 1) throw error; // Last retry failed, throw permanently
+
+                        // *** FIX: Handle 429 Rate Limit ***
+                        if (error.message && error.message.includes('API Error 429')) {
+                            this.logTelemetry('API_RATE_LIMIT', `Rate limit hit. Retrying...`, { attempt: i + 1 });
+                            const retryAfterMatch = error.message.match(/Please retry in ([0-9.]+)s/);
+                            if (retryAfterMatch && retryAfterMatch[1]) {
+                                const retryAfterSeconds = parseFloat(retryAfterMatch[1]);
+                                // Use API's suggestion + 1s buffer, or default backoff, whichever is larger
+                                currentDelay = Math.max(currentDelay, (retryAfterSeconds * 1000) + 1000); 
+                                this.logTelemetry('API_RATE_LIMIT', `API suggested retry after ${retryAfterSeconds}s. Waiting ${currentDelay}ms.`);
+                            }
+                        }
+                        // *** END FIX ***
+
+                        await new Promise(resolve => setTimeout(resolve, currentDelay));
+                    }
+                }
+            }
+            // --- UI RENDERING & EVENT HANDLERS ---
+            getPersonaColorClass(personaName) {
+                const persona = this.allPersonas.find(p => p.name === personaName);
+                if (!persona) return 'text-green-400';
+                const colorMap = {
+                    'Scientific Analysis': 'text-amber-300',
+                    'Technical Analysis': 'text-purple-400',
+                    'Creative Analysis': 'text-red-400',
+                    'Abstract/Philosophical': 'text-teal-400',
+                    'System Maintenance': 'text-lime-300'
+                };
+                return colorMap[persona.domain] || 'text-green-400';
+            }
+            toggleSelectAll() {
+                const allCheckboxes = document.querySelectorAll('#persona-list input[type="checkbox"]');
+                const isAllChecked = this.state.selectedPersonas.size === this.allPersonas.length;
+                const shouldCheck = !isAllChecked;
+                this.state.selectedPersonas.clear();
+                allCheckboxes.forEach(cb => {
+                    cb.checked = shouldCheck;
+                    const toggleLabel = cb.nextElementSibling;
+                    if (shouldCheck) {
+                        toggleLabel.classList.add('checked');
+                        this.state.selectedPersonas.add(cb.value);
+                    } else {
+                        toggleLabel.classList.remove('checked');
+                    }
+                });
+                this.dom.selectAllButton.textContent = shouldCheck ? 'Deselect All' : 'Select All';
+                this.updateCoherenceFieldIndex();
+            }
+            filterPersonas(searchTerm = '') {
+                const normalizedSearch = searchTerm.toLowerCase().trim();
+                const filteredPersonas = this.allPersonas.filter(p =>
+                    p.name.toLowerCase().includes(normalizedSearch) ||
+                    p.domain.toLowerCase().includes(normalizedSearch)
+                );
+                const domains = {};
+                for (const persona of filteredPersonas) {
+                    if (!domains[persona.domain]) domains[persona.domain] = [];
+                    domains[persona.domain].push(persona);
+                }
+                this.dom.personaList.innerHTML = '';
+                for (const domain in domains) {
+                    const domainHeader = document.createElement('h3');
+                    domainHeader.className = "text-md font-bold text-violet-400 mt-4 mb-2 border-b border-gray-700 pb-1 tracking-wider";
+                    domainHeader.textContent = `// ${domain} [${domains[domain].length}]`;
+                    this.dom.personaList.appendChild(domainHeader);
+                    for (const persona of domains[domain]) {
+                        const sanitizedId = 'cb_' + persona.name.replace(/[^a-zA-Z0-9]/g, '_');
+                        const label = document.createElement('label');
+                        label.htmlFor = sanitizedId;
+                        label.className = "flex items-center justify-between w-full p-3 bg-gray-800 rounded-lg cursor-pointer transition-all duration-200 hover:bg-gray-700 border border-gray-700";
+                        const span = document.createElement('span');
+                        span.textContent = persona.name;
+                        span.className = "font-medium text-gray-200 text-sm";
+                        const input = document.createElement('input');
+                        input.type = 'checkbox';
+                        input.id = sanitizedId;
+                        input.value = persona.name;
+                        input.className = "hidden";
+                        const toggleLabel = document.createElement('span');
+                        toggleLabel.className = "toggle-label flex-shrink-0";
+                        if (this.state.selectedPersonas.has(persona.name)) {
+                            input.checked = true;
+                            toggleLabel.classList.add('checked');
+                        }
+                        label.appendChild(span);
+                        label.appendChild(input);
+                        label.appendChild(toggleLabel);
+                        this.dom.personaList.appendChild(label);
+                    }
+                }
+                document.querySelectorAll('#persona-list input[type="checkbox"]').forEach(input => {
+                    input.addEventListener('change', (e) => {
+                        const toggleLabel = e.target.nextElementSibling;
+                        if (e.target.checked) {
+                            toggleLabel.classList.add('checked');
+                            this.state.selectedPersonas.add(e.target.value);
+                        } else {
+                            toggleLabel.classList.remove('checked');
+                            this.state.selectedPersonas.delete(e.target.value);
+                            this.dom.selectAllButton.textContent = 'Select All';
+                        }
+                        this.updateCoherenceFieldIndex();
+                    });
+                });
+                const currentSelectedCount = this.state.selectedPersonas.size;
+                const currentTotalCount = this.allPersonas.length;
+                this.dom.selectAllButton.textContent = (currentTotalCount > 0 && currentSelectedCount === currentTotalCount)
+                    ? 'Deselect All'
+                    : 'Select All';
+            }
+            toggleSidebar() {
+                this.dom.sidebar.classList.toggle('active');
+            }
+            addMessage(content, sender, personaName = null, sources = [], messageId = null) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `chat-bubble ${sender}-bubble`;
+                if (messageId) messageDiv.id = messageId;
+                if (personaName) {
+                    const personaHeader = document.createElement('div');
+                    let colorClass = 'text-green-400';
+                    if (sender === 'ai-error') colorClass = 'text-red-400';
+                    else if (personaName.includes('UCM: Final Coherence State')) colorClass = 'text-teal-300';
+                    else if (personaName.includes('PATCH PROPOSAL')) colorClass = 'text-lime-300';
+                    else colorClass = this.getPersonaColorClass(personaName);
+                    personaHeader.className = `font-bold text-sm ${colorClass} mb-1`;
+                    personaHeader.textContent = personaName;
+                    messageDiv.appendChild(personaHeader);
+                }
+                if (sender === 'ai-loading') {
+                    const loadingDiv = document.createElement('div');
+                    loadingDiv.className = 'flex items-center space-x-2';
+                    const loader = document.createElement('div');
+                    loader.className = 'loader';
+                    const p = document.createElement('p');
+                    p.textContent = content;
+                    p.className = 'text-gray-400 text-sm';
+                    loadingDiv.appendChild(loader);
+                    loadingDiv.appendChild(p);
+                    messageDiv.appendChild(loadingDiv);
+                } else {
+                    // Use a simple text node if code block markers are absent
+                    const usePre = content.includes('```');
+                    
+                    if (usePre) {
+                        const pre = document.createElement('pre');
+                        pre.className = "bg-gray-950 p-3 rounded-lg overflow-x-auto text-sm";
+                        const code = document.createElement('code');
+                        code.textContent = content;
+                        pre.appendChild(code);
+                        messageDiv.appendChild(pre);
+                    } else {
+                        const p = document.createElement('p');
+                        p.textContent = content;
+                        messageDiv.appendChild(p);
+                    }
+                }
+                this.dom.chatContainer.appendChild(messageDiv);
+                this.dom.chatContainer.scrollTop = this.dom.chatContainer.scrollHeight;
+            }
+            removeMessage(messageId) {
+                const messageEl = document.getElementById(messageId);
+                if (messageEl) messageEl.remove();
+            }
+            setLoading(isLoading) {
+                if (isLoading) {
+                    this.dom.mainHeader.classList.add('header-pulse');
+                    this.dom.messageInput.disabled = true;
+                    this.dom.sendButton.disabled = true;
+                    this.dom.debugButton.disabled = true;
+                    this.dom.debugScope.disabled = true;
+                    this.dom.sendButton.classList.add('opacity-30', 'cursor-not-allowed');
+                    this.logTelemetry('FLOW_STATUS', 'High energy transmission commenced.');
+                } else {
+                    this.dom.mainHeader.classList.remove('header-pulse');
+                    this.checkApiKey();
+                    this.dom.debugScope.disabled = false;
+                    this.dom.sendButton.classList.remove('opacity-30', 'cursor-not-allowed');
+                    this.dom.messageInput.focus();
+                    this.logTelemetry('FLOW_STATUS', 'Energy transmission stabilized (Idle).');
+                }
+                this.updateCoherenceFieldIndex();
+            }
+            updateChatHeader() {
+                const selectedCount = this.state.selectedPersonas.size;
+                if (selectedCount === 0) {
+                    this.dom.chatHeader.textContent = "STANDBY MODE: SELECT AGENTS";
+                } else if (selectedCount === 1) {
+                    const name = Array.from(this.state.selectedPersonas)[0];
+                    if (name === "Autonomic Debugger") {
+                        this.dom.chatHeader.textContent = `SYSTEM GOVERNOR: ADP ACTIVE`;
+                    } else {
+                        this.dom.chatHeader.textContent = `FOCUSED AGENT: ${name}`;
+                    }
+                } else {
+                    this.dom.chatHeader.textContent = `COHERENCE MATRIX: ${selectedCount} STATES ENGAGED (ITERATION ACTIVE)`;
+                }
+            }
+        }
+        // Initialize the Core Engine upon DOM load
+        document.addEventListener('DOMContentLoaded', () => {
+            window.UCMCore = UCMCore; // Expose the class globally for inline handlers
+            UCMCore.getInstance();
+        });
+    </script>
+</body>
+</html>
